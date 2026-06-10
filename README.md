@@ -245,3 +245,17 @@ with ToString(arg, resume)
 end
 print("Final result is ".. result)
 ```
+
+## About
+
+* Lua was chosen for its relatively simple standard, which makes it easier to implement. Its syntax is clean, intuitive, and concise. Furthermore, it is not an overly obscure language and boasts its own established ecosystem.
+
+* While it passes the majority of the test suite (with minor modifications made to the official Lua 5.1 test suite), LuaAE should still be considered a "toy" language.
+
+* Algebraic effects are not a new concept; languages like Koka have already implemented them. However, languages supporting **multi-shot continuations** remain rare. This project is an attempt to materialize this concept—it is more of an "academic artifact" than a production-ready tool.
+
+* The goal of this project is not to create an "upgraded Lua," a "JavaScript replacement," or a "next-generation programming language." As mentioned above, multi-shot continuations are currently largely academic (e.g., probabilistic programming) and have limited utility in practical business development. Critical questions remain: If an open file handle is resumed multiple times and distributed across different "branches" of the program, what happens? Will the file handle be closed multiple times? These are vast and complex issues. Regrettably, LuaAE (at least in its first iteration) does not offer a universal solution for these problems. This is why you may notice that the implementation of system resources (such as the `io` module) in LuaAE feels somewhat rudimentary or rushed.
+
+* Please note that while **parts of the code were assisted by AI**, the architecture, design, code merging, and testing processes were entirely performed and managed by me. In my view, this represents the future paradigm of software development.
+
+
