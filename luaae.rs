@@ -8803,6 +8803,7 @@ impl<'a, 'b> Compiler<'a, 'b> {
 
             self.emit(OpCode::LoadLocal(var_indices[0] as u32));
             self.emit(OpCode::StoreLocal(c_idx as u32));
+            self.emit(OpCode::Pop);
 
             self.emit(OpCode::LoadLocal(c_idx as u32));
             self.emit(OpCode::PushNil);
