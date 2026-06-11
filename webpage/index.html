@@ -125,6 +125,7 @@
             font-size: 13px; overflow-y: auto; white-space: pre-wrap; word-wrap: break-word;
         }
         .output-error { color: var(--error-color); }
+	.output-muted { color: var(--text-muted); font-style: italic; }
     </style>
 </head>
 <body>
@@ -200,6 +201,23 @@
             output: document.getElementById('output'),
             status: document.getElementById('statusIndicator')
         };
+	function showWelcomeOutput() {
+            DOM.output.innerHTML = '';
+            const span = document.createElement('span');
+            span.className = 'output-muted';
+            span.innerText = 
+`Tips:
+ - Press [Ctrl + Enter] to run the current file.
+ - Press [Ctrl + \\] to toggle split screen view.
+ - Press [Ctrl + S] to save the file locally.
+
+ - Due to limitations of WASM, 'os' and 'io' library is removed.
+ - 'debug' library is not implemented completely.
+ - This page may not present the latest version of LuaAE (current: ver. Jun 11 2026)
+`;
+            DOM.output.appendChild(span);
+	}
+	showWelcomeOutput();
         require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.39.0/min/vs' }});
         require(['vs/editor/editor.main'], function() {
             
@@ -446,7 +464,7 @@
             resetUI(); 
         });
 
-        document.getElementById('clearOutBtn').addEventListener('click', () => DOM.output.innerHTML = '');
+        document.getElementById('clearOutBtn').addEventListener('click', () => showWelcomeOutput());
 
         function toggleSplit() {
             isSplit = !isSplit;
