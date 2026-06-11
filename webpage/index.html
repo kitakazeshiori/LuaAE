@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <title>LuaAE</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root[data-theme="dark"] {
+            --bg-color: #1e1e1e;
+            --header-bg: #333333;
+            --tab-bg: #2d2d2d;
+            --tab-active-bg: #1e1e1e;
+            --tab-inactive-active-bg: #2b2b2b;
+            --tab-border: #252526;
+            --text-color: #cccccc;
+            --text-muted: #888888;
+            --border-color: #444444;
+            --btn-hover: #505050;
+            --terminal-bg: #1e1e1e;
+            --terminal-header-bg: #252526;
+            --error-color: #f14c4c;
+            --success-color: #89d185;
+            --accent-color: #007acc;
+        }
+
+        :root[data-theme="light"] {
+            --bg-color: #ffffff;
+            --header-bg: #f3f3f3;
+            --tab-bg: #ececec;
+            --tab-active-bg: #ffffff;
+            --tab-inactive-active-bg: #f8f8f8;
+            --tab-border: #cccccc;
+            --text-color: #333333;
+            --text-muted: #777777;
+            --border-color: #e8e8e8;
+            --btn-hover: #e0e0e0;
+            --terminal-bg: #ffffff;
+            --terminal-header-bg: #f3f3f3;
+            --error-color: #d16969;
+            --success-color: #098658;
+            --accent-color: #0060a0;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color); color: var(--text-color);
+            height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+        }
+        header {
+            background-color: var(--header-bg); height: 48px; display: flex;
+            align-items: center; padding: 0 15px; border-bottom: 1px solid var(--border-color);
+            justify-content: space-between; user-select: none;
+        }
+        .toolbar-group { display: flex; gap: 8px; align-items: center; }
+        .title { font-weight: 600; font-size: 14px; margin-right: 20px; color: var(--text-color); }
+        button {
+            background: transparent; color: var(--text-color); border: 1px solid transparent;
+            padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px;
+            display: flex; align-items: center; gap: 6px; transition: all 0.2s;
+        }
+        button:hover:not(:disabled) { background-color: var(--btn-hover); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .icon-btn { padding: 6px 8px; }
+        .btn-run { color: var(--success-color); border-color: var(--success-color); }
+        .btn-run:hover:not(:disabled) { background-color: var(--success-color); color: white; }
+        .btn-stop { color: var(--error-color); border-color: var(--error-color); }
+        .btn-stop:hover:not(:disabled) { background-color: var(--error-color); color: white; }
+
+        main { display: flex; flex-direction: column; flex: 1; height: calc(100vh - 48px); }
+
+        #workspace { flex: 1; display: flex; position: relative; overflow: hidden; border-bottom: 1px solid var(--border-color); }
+
+        .pane { flex: 1; display: flex; flex-direction: column; min-width: 0; background-color: var(--bg-color); }
+        #pane-right { display: none; border-left: 1px solid var(--border-color); }
+        
+        .editor-container { flex: 1; width: 100%; }
+        .tabs-container {
+            display: flex; background-color: var(--tab-border); height: 36px;
+            overflow-x: auto; overflow-y: hidden; user-select: none;
+        }
+        .tabs-container::-webkit-scrollbar { height: 4px; }
+        .tabs-container::-webkit-scrollbar-thumb { background: var(--border-color); }
+
+        .tab {
+            display: flex; align-items: center; padding: 0 12px; min-width: 120px;
+            background-color: var(--tab-bg); color: var(--text-muted); cursor: pointer;
+            border-right: 1px solid var(--tab-border); font-size: 13px; position: relative;
+        }
+        .tab.active { background-color: var(--tab-inactive-active-bg); color: var(--text-color); }
+        .pane.focused .tab.active { background-color: var(--tab-active-bg); border-top: 1px solid var(--accent-color); }
+        
+        .tab .tab-title { flex: 1; margin-right: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: monospace; }
+        .tab .tab-close { font-size: 12px; border-radius: 3px; padding: 2px 4px; opacity: 0; }
+        .tab:hover .tab-close { opacity: 1; }
+        .tab .tab-close:hover { background-color: var(--btn-hover); color: var(--error-color); }
+        .tab .dirty-dot { display: none; font-size: 8px; margin-right: 4px; color: var(--text-color); }
+        .tab.dirty .dirty-dot { display: inline-block; }
+        .tab.dirty .tab-close { display: none; }
+        .tab.dirty:hover .tab-close { display: inline-block; opacity: 1; }
+        .tab.dirty:hover .dirty-dot { display: none; }
+        #welcome-screen {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: var(--bg-color); z-index: 10;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        #welcome-screen h1 { margin-bottom: 30px; font-weight: 400; color: var(--text-color); }
+        .welcome-buttons { display: flex; flex-direction: column; gap: 15px; width: 300px; }
+        .welcome-btn {
+            justify-content: flex-start; padding: 12px 20px; font-size: 15px;
+            background-color: var(--header-bg); border: 1px solid var(--border-color);
+        }
+        .welcome-btn:hover { background-color: var(--btn-hover); border-color: var(--accent-color); }
+        .welcome-btn i { width: 24px; color: var(--accent-color); }
+        #terminal-container { height: 32%; min-height: 150px; background-color: var(--terminal-bg); display: flex; flex-direction: column; }
+        .terminal-tabs {
+            background-color: var(--terminal-header-bg); padding: 4px 15px; font-size: 12px;
+            text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--border-color);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .term-actions { display: flex; gap: 10px; align-items: center; }
+        #output {
+            flex: 1; padding: 10px 15px; font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 13px; overflow-y: auto; white-space: pre-wrap; word-wrap: break-word;
+        }
+        .output-error { color: var(--error-color); }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="toolbar-group">
+            <div class="title"><i class="fa-brands fa-lua" style="color: var(--accent-color);"></i> LuaAE </div>
+            <button id="newBtn" title="New File (Ctrl+N)"><i class="fa-solid fa-file-circle-plus"></i> New</button>
+            <button id="openBtn" title="Open File"><i class="fa-regular fa-folder-open"></i> Open</button>
+            <button id="saveBtn" title="Save File (Ctrl+S)"><i class="fa-regular fa-floppy-disk"></i> Save</button>
+            <input type="file" id="fileInput" accept=".lua,.txt" style="display: none;">
+        </div>
+        <div class="toolbar-group">
+            <button id="splitBtn" title="Toggle Split Screen (Ctrl+\\)"><i class="fa-solid fa-columns"></i> Split</button>
+            <div style="width: 1px; height: 20px; background-color: var(--border-color); margin: 0 5px;"></div>
+            <button id="runBtn" class="btn-run" title="Run Code (Ctrl+Enter)"><i class="fa-solid fa-play"></i> Run</button>
+            <button id="stopBtn" class="btn-stop" disabled><i class="fa-solid fa-stop"></i> Stop</button>
+            <div style="width: 1px; height: 20px; background-color: var(--border-color); margin: 0 5px;"></div>
+            <button id="themeBtn" class="icon-btn" title="Toggle Theme"><i class="fa-solid fa-sun"></i></button>
+        </div>
+    </header>
+
+    <main>
+        <div id="workspace">
+            <div id="welcome-screen">
+                <h1><i class="fa-brands fa-lua" style="color: var(--accent-color);"></i> Lua Algebraic Effects</h1>
+                <div class="welcome-buttons">
+                    <button class="welcome-btn" id="tplBlank"><i class="fa-regular fa-file-code"></i> Blank </button>
+                    <button class="welcome-btn" id="tpl8Queens"><i class="fa-solid fa-chess-board"></i> 8 Queens Problem</button>
+                    <button class="welcome-btn" id="tplMultishot"><i class="fa-solid fa-bolt"></i> Multishot Effect</button>
+                </div>
+            </div>
+            <div id="pane-left" class="pane focused" data-side="left">
+                <div id="tabs-left" class="tabs-container"></div>
+                <div id="editor-left" class="editor-container"></div>
+            </div>
+            <div id="pane-right" class="pane" data-side="right">
+                <div id="tabs-right" class="tabs-container"></div>
+                <div id="editor-right" class="editor-container"></div>
+            </div>
+        </div>
+        
+        <!-- 终端 -->
+        <div id="terminal-container">
+            <div class="terminal-tabs">
+                <span>OUTPUT</span>
+                <div class="term-actions">
+                    <span id="statusIndicator" style="color: var(--text-muted);">Ready</span>
+                    <button id="clearOutBtn" class="icon-btn" title="Clear Output"><i class="fa-solid fa-trash-can"></i></button>
+                </div>
+            </div>
+            <pre id="output"></pre>
+        </div>
+    </main>
+
+    <!-- Monaco Editor -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.39.0/min/vs/loader.min.js"></script>
+    
+    <script type="module">
+        let worker = null;
+        let isDarkMode = true;
+        let isSplit = false;
+        
+        let tabCounter = 0;
+        const panes = {
+            left: { id: 'left', tabs: [], activeTabId: null, editor: null, el: document.getElementById('pane-left'), tabsEl: document.getElementById('tabs-left') },
+            right: { id: 'right', tabs: [], activeTabId: null, editor: null, el: document.getElementById('pane-right'), tabsEl: document.getElementById('tabs-right') }
+        };
+        let activePaneId = 'left';
+
+        const DOM = {
+            welcomeScreen: document.getElementById('welcome-screen'),
+            output: document.getElementById('output'),
+            status: document.getElementById('statusIndicator')
+        };
+        require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.39.0/min/vs' }});
+        require(['vs/editor/editor.main'], function() {
+            
+            monaco.languages.register({ id: 'luaae' });
+            monaco.languages.setMonarchTokensProvider('luaae', {
+                keywords: [
+                    'and','break','do','else','elseif','end','false','for','function','if','in','local','nil','not','or',
+                    'repeat','return','then','true','until','while', 
+                    'handle', 'perform', 'with', 'continue'
+                ],
+                operators: ['+','-','*','/','%','^','#','==','~=','!=','<=','>=','<','>','=',';',':',',','.','..','...'],
+                brackets: [ ['{','}','delimiter.curly'], ['[',']','delimiter.square'], ['(',')','delimiter.parenthesis'] ],
+                tokenizer: {
+                    root: [
+                        [/[a-zA-Z_]\w*/, { cases: { '@keywords': 'keyword', '@default': 'identifier' } }],
+                        { include: '@whitespace' },
+                        [/[{}()\[\]]/, '@brackets'],
+                        [/\d*\.\d+([eE][\-+]?\d+)?/, 'number.float'],
+                        [/0[xX][0-9a-fA-F]+/, 'number.hex'],
+                        [/\d+/, 'number'],
+                        [/"([^"\\]|\\.)*$/, 'string.invalid'],
+                        [/'([^'\\]|\\.)*$/, 'string.invalid'],
+                        [/"/,  'string', '@string."'],
+                        [/'/,  'string', "@string.'"],
+                    ],
+                    whitespace: [
+                        [/[ \t\r\n]+/, 'white'],
+                        [/--\[([=]*)\[/, 'comment', '@comment.$1'],
+                        [/--.*$/, 'comment'],
+                    ],
+                    comment: [
+                        [/[^\]]+/, 'comment'],
+                        [/\]([=]*)\]/, { cases: { '$1==$S2': { token: 'comment', next: '@pop' }, '@default': 'comment' } }],
+                        [/./, 'comment']
+                    ],
+                    string: [
+                        [/[^\\"']+/, 'string'],
+                        [/\\./, 'string.escape'],
+                        [/["']/, { cases: { '$#==$S2': { token: 'string', next: '@pop' }, '@default': 'string' } }]
+                    ]
+                }
+            });
+
+            const commonOptions = {
+                language: 'luaae', theme: 'vs-dark', automaticLayout: true,
+                minimap: { enabled: false }, fontSize: 14, fontFamily: "'Consolas', 'Courier New', monospace"
+            };
+
+            panes.left.editor = monaco.editor.create(document.getElementById('editor-left'), commonOptions);
+            panes.right.editor = monaco.editor.create(document.getElementById('editor-right'), commonOptions);
+            panes.left.editor.onDidFocusEditorText(() => setActivePane('left'));
+            panes.right.editor.onDidFocusEditorText(() => setActivePane('right'));
+
+            updateWorkspace();
+        });
+        function createTab(title, content, paneId = activePaneId) {
+            tabCounter++;
+            const id = 'tab-' + tabCounter;
+            const model = monaco.editor.createModel(content, 'luaae');
+            model._isDirty = false;
+            
+            const tabObj = { id, title, model };
+            
+            model.onDidChangeContent(() => {
+                if (!model._isDirty) {
+                    model._isDirty = true;
+                    renderTabs('left'); renderTabs('right');
+                }
+            });
+
+            panes[paneId].tabs.push(tabObj);
+            setActiveTab(paneId, id);
+        }
+
+        function closeTab(paneId, tabId) {
+            const pane = panes[paneId];
+            const index = pane.tabs.findIndex(t => t.id === tabId);
+            if (index === -1) return;
+            const tab = pane.tabs[index];
+            const otherPaneId = paneId === 'left' ? 'right' : 'left';
+            const isUsedElsewhere = panes[otherPaneId].tabs.some(t => t.model === tab.model);
+
+            if (tab.model._isDirty && !isUsedElsewhere) {
+                if (!confirm(`Do you want to close "${tab.title}" without saving?`)) return;
+            }
+
+            pane.tabs.splice(index, 1);
+            if (!isUsedElsewhere) tab.model.dispose();
+            if (pane.tabs.length === 0) {
+                pane.activeTabId = null;
+            } else if (pane.activeTabId === tabId) {
+                pane.activeTabId = pane.tabs[Math.min(index, pane.tabs.length - 1)].id;
+            }
+
+            renderTabs(paneId);
+            updateWorkspace();
+        }
+
+        function setActiveTab(paneId, tabId) {
+            setActivePane(paneId);
+            panes[paneId].activeTabId = tabId;
+            renderTabs(paneId);
+            updateWorkspace();
+        }
+
+        function setActivePane(paneId) {
+            activePaneId = paneId;
+            panes.left.el.classList.toggle('focused', paneId === 'left');
+            panes.right.el.classList.toggle('focused', paneId === 'right');
+            renderTabs('left'); renderTabs('right');
+        }
+
+        panes.left.tabsEl.addEventListener('mousedown', () => setActivePane('left'));
+        panes.right.tabsEl.addEventListener('mousedown', () => setActivePane('right'));
+
+        function renderTabs(paneId) {
+            const pane = panes[paneId];
+            pane.tabsEl.innerHTML = '';
+            pane.tabs.forEach(tab => {
+                const isDirty = tab.model._isDirty;
+                const isActive = tab.id === pane.activeTabId;
+                const tabEl = document.createElement('div');
+                tabEl.className = `tab ${isActive ? 'active' : ''} ${isDirty ? 'dirty' : ''}`;
+                
+                tabEl.innerHTML = `
+                    <i class="fa-solid fa-circle dirty-dot"></i>
+                    <span class="tab-title">${tab.title}</span>
+                    <i class="fa-solid fa-xmark tab-close"></i>
+                `;
+
+                tabEl.addEventListener('mousedown', (e) => {
+                    if (e.button === 1) closeTab(paneId, tab.id);
+                    else if (e.target.classList.contains('tab-close')) closeTab(paneId, tab.id);
+                    else setActiveTab(paneId, tab.id);
+                });
+
+                pane.tabsEl.appendChild(tabEl);
+            });
+        }
+
+        function updateWorkspace() {
+            if (!panes.left.editor) return;
+
+            const totalTabs = panes.left.tabs.length + (isSplit ? panes.right.tabs.length : 0);
+            if (totalTabs === 0) {
+                DOM.welcomeScreen.style.display = 'flex';
+            } else {
+                DOM.welcomeScreen.style.display = 'none';
+            }
+
+            ['left', 'right'].forEach(side => {
+                const p = panes[side];
+                if (p.activeTabId) {
+                    const activeTab = p.tabs.find(t => t.id === p.activeTabId);
+                    if (activeTab) p.editor.setModel(activeTab.model);
+                } else {
+                    p.editor.setModel(null);
+                }
+            });
+        }
+        window.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                const key = e.key.toLowerCase();
+                if (['s', 'n', 'w', '\\', 'enter'].includes(key)) {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    switch(key) {
+                        case 's':
+                            saveActiveTab();
+                            break;
+                        case 'w':
+                            if (panes[activePaneId].activeTabId) {
+                                closeTab(activePaneId, panes[activePaneId].activeTabId);
+                            }
+                            break;
+                        case 'n':
+                            document.getElementById('newBtn').click();
+                            break;
+                        case '\\':
+                            toggleSplit();
+                            break;
+                        case 'enter':
+                            document.getElementById('runBtn').click();
+                            break;
+                    }
+                }
+            }
+        }, { capture: true });
+
+        window.addEventListener('beforeunload', (e) => {
+            const hasDirty = panes.left.tabs.some(t => t.model._isDirty) || panes.right.tabs.some(t => t.model._isDirty);
+            if (hasDirty) {
+                e.preventDefault();
+                e.returnValue = 'You have unsaved changes.';
+            }
+        });
+        function spawnWorker() {
+            if (worker) worker.terminate();
+            worker = new Worker('worker.js', { type: 'module' });
+
+            worker.onmessage = (event) => {
+                const { status, data } = event.data;
+                if (status === 'success') appendOutput(data || "(no output)", false);
+                else if (status === 'panic') { appendOutput(data, true); spawnWorker(); }
+                resetUI();
+            };
+            worker.onerror = (error) => {
+                error.preventDefault();
+                appendOutput("Fatal WebAssembly Crash:\n" + error.message, true);
+                resetUI();
+            };
+        }
+
+        function appendOutput(text, isError) {
+            const span = document.createElement('span');
+            if (isError) span.className = 'output-error';
+            span.innerText = text + '\n';
+            DOM.output.appendChild(span);
+            DOM.output.scrollTop = DOM.output.scrollHeight;
+        }
+
+        function resetUI() {
+            document.getElementById('runBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+            DOM.status.innerText = 'Ready';
+        }
+
+        spawnWorker();
+        document.getElementById('runBtn').addEventListener('click', () => {
+            const activeTab = panes[activePaneId].tabs.find(t => t.id === panes[activePaneId].activeTabId);
+            if (!activeTab) return;
+
+            DOM.output.innerHTML = '';
+            DOM.status.innerText = 'Running...';
+            document.getElementById('runBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            worker.postMessage(activeTab.model.getValue());
+        });
+
+        document.getElementById('stopBtn').addEventListener('click', () => {
+            appendOutput("Execution terminated forcefully.", true);
+            spawnWorker();
+            resetUI(); 
+        });
+
+        document.getElementById('clearOutBtn').addEventListener('click', () => DOM.output.innerHTML = '');
+
+        function toggleSplit() {
+            isSplit = !isSplit;
+            panes.right.el.style.display = isSplit ? 'flex' : 'none';
+            
+            if (isSplit) {
+                if (panes.right.tabs.length === 0 && panes.left.activeTabId) {
+                    const activeTab = panes.left.tabs.find(t => t.id === panes.left.activeTabId);
+                    tabCounter++;
+                    panes.right.tabs.push({ id: 'tab-'+tabCounter, title: activeTab.title, model: activeTab.model });
+                    panes.right.activeTabId = 'tab-'+tabCounter;
+                }
+                setActivePane('right');
+            } else {
+                panes.right.tabs.forEach(t => {
+                    const exists = panes.left.tabs.some(lt => lt.model === t.model);
+                    if (!exists) panes.left.tabs.push(t);
+                });
+                panes.right.tabs = [];
+                panes.right.activeTabId = null;
+                setActivePane('left');
+            }
+            if (panes.left.editor) panes.left.editor.layout();
+            if (panes.right.editor) panes.right.editor.layout();
+            updateWorkspace();
+        }
+        document.getElementById('splitBtn').addEventListener('click', toggleSplit);
+
+        document.getElementById('themeBtn').addEventListener('click', (e) => {
+            isDarkMode = !isDarkMode;
+            document.documentElement.setAttribute('data-theme', isDarkMode ? 'dark' : 'light');
+            e.currentTarget.innerHTML = isDarkMode ? '<i class="fa-solid fa-sun"></i>' : '<i class="fa-solid fa-moon"></i>';
+            if (panes.left.editor) monaco.editor.setTheme(isDarkMode ? 'vs-dark' : 'vs');
+        });
+
+        document.getElementById('newBtn').addEventListener('click', () => createTab(`Untitled-${tabCounter+1}.lua`, ''));
+        document.getElementById('openBtn').addEventListener('click', () => document.getElementById('fileInput').click());
+        document.getElementById('fileInput').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => createTab(file.name, event.target.result);
+            reader.readAsText(file);
+            e.target.value = '';
+        });
+
+        function saveActiveTab() {
+            const pane = panes[activePaneId];
+            const activeTab = pane.tabs.find(t => t.id === pane.activeTabId);
+            if (!activeTab) return;
+            
+            const blob = new Blob([activeTab.model.getValue()], { type: "text/plain;charset=utf-8" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = activeTab.title; a.click();
+            URL.revokeObjectURL(url);
+
+            activeTab.model._isDirty = false;
+            renderTabs('left'); renderTabs('right');
+        }
+        document.getElementById('saveBtn').addEventListener('click', saveActiveTab);
+        const TPL_BLANK = `print("Hello Algebraic Effects")\n`;
+        const TPL_8QUEENS = `-- 8 Queens Problem\nlocal N = 8\nlocal function isplaceok(a, n, c)\n  for i = 1, n - 1 do\n    if (a[i] == c) or (a[i] - i == c - n) or (a[i] + i == c + n) then return false end\n  end\n  return true\nend\n\nlocal function addqueen(a, n)\n  if n > N then\n    local out = {}\n    for i = 1, N do table.insert(out, a[i]) end\n    print(table.concat(out, " "))\n  else\n    for c = 1, N do\n      if isplaceok(a, n, c) then\n        a[n] = c\n        addqueen(a, n + 1)\n      end\n    end\n  end\nend\n\naddqueen({}, 1)\n`;
+        const TPL_MULTISHOT = 'local permutations = {}\nlocal function generate(avail, path_str)\n    if #avail == 0 then\n        table.insert(permutations, path_str)\n        return\n    end\n    local elem, rest = perform Choose(avail)\n    local new_path = path_str == "" and tostring(elem) or (path_str .. tostring(elem))\n    generate(rest, new_path)\nend\n\nhandle\n    generate({"A", "B", "C", \'<ignored>\', "D", "E", \'<ignore-tail>\', "F", "G"}, "")\nwith Choose(avail, resume)\n    for i = 1, #avail do\n        if avail[i] == "<ignored>" then continue end\n        if avail[i] == "<ignore-tail>" then break end\n        local elem = avail[i]\n        local rest = {}\n        for j = 1, #avail do\n            if i != j then\n                if avail[j] == "<ignored>" then continue end\n                if avail[j] == "<ignore-tail>" then break end\n                table.insert(rest, avail[j]) \n            end\n        end\n        resume(elem, rest)\n    end\nend\nprint("All Generated Permutations:")\nfor i, p in ipairs(permutations) do\n    print("  [" .. i .. "] " .. p)\nend';
+
+        document.getElementById('tplBlank').addEventListener('click', () => createTab('Blank.lua', TPL_BLANK));
+        document.getElementById('tpl8Queens').addEventListener('click', () => createTab('8Queens.lua', TPL_8QUEENS));
+        document.getElementById('tplMultishot').addEventListener('click', () => createTab('Multishot.lua', TPL_MULTISHOT));
+    </script>
+</body>
+</html>

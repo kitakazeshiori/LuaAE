@@ -1,0 +1,15 @@
+{
+  "name": "luaae-wasm",
+  "type": "module",
+  "version": "0.1.0",
+  "files": [
+    "luaae_wasm_bg.wasm",
+    "luaae_wasm.js",
+    "luaae_wasm.d.ts"
+  ],
+  "main": "luaae_wasm.js",
+  "types": "luaae_wasm.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}
