@@ -1,14 +1,14 @@
 /* @ts-self-types="./luaae_wasm.d.ts" */
 
 /**
- * @param {string} code
+ * @param {string} source
  * @returns {string}
  */
-export function run_lua_code(code) {
+export function run_lua_code(source) {
     let deferred2_0;
     let deferred2_1;
     try {
-        const ptr0 = passStringToWasm0(code, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const ptr0 = passStringToWasm0(source, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
         const ret = wasm.run_lua_code(ptr0, len0);
         deferred2_0 = ret[0];
@@ -21,8 +21,33 @@ export function run_lua_code(code) {
 function __wbg_get_imports() {
     const import0 = {
         __proto__: null,
-        __wbg_error_683e2690312aaaf2: function(arg0, arg1) {
-            console.error(getStringFromWasm0(arg0, arg1));
+        __wbg___wbindgen_throw_5d9e815e6fdf150f: function(arg0, arg1) {
+            throw new Error(getStringFromWasm0(arg0, arg1));
+        },
+        __wbg_getTime_65922ba0b59d55a7: function(arg0) {
+            const ret = arg0.getTime();
+            return ret;
+        },
+        __wbg_getTimezoneOffset_6e4850ad528ac37d: function(arg0) {
+            const ret = arg0.getTimezoneOffset();
+            return ret;
+        },
+        __wbg_new_0_35540e542ba689d2: function() {
+            const ret = new Date();
+            return ret;
+        },
+        __wbg_new_180f1022bb6ee517: function(arg0) {
+            const ret = new Date(arg0);
+            return ret;
+        },
+        __wbg_new_with_year_month_day_hr_min_sec_b23a132275d4b46a: function(arg0, arg1, arg2, arg3, arg4, arg5) {
+            const ret = new Date(arg0 >>> 0, arg1, arg2, arg3, arg4, arg5);
+            return ret;
+        },
+        __wbindgen_generic_0000000000000001: function(arg0) {
+            // Cast intrinsic for `F64 -> Externref`.
+            const ret = arg0;
+            return ret;
         },
         __wbindgen_init_externref_table: function() {
             const table = wasm.__wbindgen_externrefs;
@@ -130,11 +155,15 @@ function __wbg_finalize_init(instance, module) {
 
 async function __wbg_load(module, imports) {
     if (typeof Response === 'function' && module instanceof Response) {
+        if (!module.ok) {
+            throw new Error(`failed to fetch Wasm: ${module.status} ${module.statusText} fetching '${module.url}'`);
+        }
+
         if (typeof WebAssembly.instantiateStreaming === 'function') {
             try {
                 return await WebAssembly.instantiateStreaming(module, imports);
             } catch (e) {
-                const validResponse = module.ok && expectedResponseType(module.type);
+                const validResponse = expectedResponseType(module.type);
 
                 if (validResponse && module.headers.get('Content-Type') !== 'application/wasm') {
                     console.warn("`WebAssembly.instantiateStreaming` failed because your server does not serve Wasm with `application/wasm` MIME type. Falling back to `WebAssembly.instantiate` which is slower. Original error:\n", e);

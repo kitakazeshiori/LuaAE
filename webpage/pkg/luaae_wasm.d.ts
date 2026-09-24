@@ -1,7 +1,7 @@
 /* tslint:disable */
 /* eslint-disable */
 
-export function run_lua_code(code: string): string;
+export function run_lua_code(source: string): string;
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 

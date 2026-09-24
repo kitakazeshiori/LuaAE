@@ -1,0 +1,4 @@
+/target/
+*.out
+*.log
+tests/official/lua-5.3.4-tests/time.txt

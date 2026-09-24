@@ -1,10 +1,12 @@
 # LuaAE: Lua with Algebraic Effects
 
-LuaAE is a lightweight, embeddable bytecode virtual machine written entirely in Rust, implementing a fully-featured dialect of Lua, closely resembling Lua 5.1 (with some 5.2, 5.3 features).
+LuaAE is a Lua-like bytecode virtual machine written in Rust, with multi-shot algebraic effects and broad Lua 5.3 compatibility.
 
-LuaAE has been tested on official Lua 5.1 Test Suite and passed most of its modules.
+The portable Lua 5.3.4 official test suite passes with `_port=true`. This excludes tests that require the reference interpreter's C test libraries or platform-specific behavior; it is not a claim of full Lua 5.3 implementation parity. The effect regression suite covers multi-shot continuations across Lua calls, metamethods, and native library callbacks.
 
 Try the online [LuaAE interpreter](https://kitakazeshiori.github.io/LuaAE/webpage/).
+
+Run the portable official suite with `cargo test --release --test vm_stack official_full_portable_suite_passes_without_soft_mode -- --ignored`. Run the effect cases with `cargo test --test algeffect`. See [webpage/README.md](webpage/README.md) to rebuild the browser VM from this source.
 
 ### Features
 
@@ -142,9 +144,9 @@ LuaAE preserves Lua's native support for multiple values across the effect bound
 
 ## 5. Security
 
-### C-Call Boundary
+### Native Call Boundary
 
-Algebraic effects cannot yield control across a C-Call boundary. Performing an effect inside a standard library abstraction implemented natively in the host engine (such as `pcall`, `xpcall`, `table.sort`) will trigger a runtime error.
+LuaAE implements its standard-library callbacks with VM continuations. Effects can suspend and resume through supported native abstractions, including `pcall`, `xpcall`, `table.sort`, `string.gsub`, `load`, `require`, and iterator callbacks. These paths use explicit VM frames, not recursive Rust calls. Browser WebAssembly builds still have platform limitations for filesystem and process operations.
 
 > Use the native language constructs (`handle/with`) for structured error interception instead of legacy `pcall` primitives if effect propagation is anticipated.
 
@@ -252,7 +254,7 @@ print("Final result is ".. result)
 
 * Lua was chosen for its relatively simple standard, which makes it easier to implement. Its syntax is clean, intuitive, and concise. Furthermore, it is not an overly obscure language and boasts its own established ecosystem.
 
-* While it passes the majority of the test suite (with minor modifications made to the official Lua 5.1 test suite), LuaAE should still be considered a "toy" language.
+* Passing the portable Lua 5.3.4 suite is a substantial compatibility check, but LuaAE should still be considered an experimental language implementation rather than a production replacement for Lua.
 
 * Algebraic effects are not a new concept; languages like Koka have already implemented them. However, languages supporting **multi-shot continuations** remain rare. This project is an attempt to materialize this concept—it is more of an "academic artifact" than a production-ready tool.
 

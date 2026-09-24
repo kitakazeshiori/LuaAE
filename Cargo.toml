@@ -1,0 +1,21 @@
+[package]
+name = "luaae"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "A Lua interpreter with multi-shot algebraic effects"
+
+[[bin]]
+name = "luaae"
+path = "luaae.rs"
+
+[lib]
+name = "luaae_wasm"
+path = "luaae.rs"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+md5 = "0.7"
+stacker = "0.1.25"
+chrono = "0.4"
+wasm-bindgen = "0.2.128"
